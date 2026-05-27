@@ -1,0 +1,34 @@
+# Caches
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# Entornos
+.venv/
+venv/
+env/
+
+# Editores
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Credenciales — NUNCA committear
+.env
+credentials/
+*.pem
+service_account*.json
+
+# Outputs de prueba (los notebooks regeneran el parquet desde Excel)
+# Descomentá si querés versionar el parquet:
+# data/denuncias.parquet
+# data/denuncias.csv
+
+# Logs
+*.log
+logs/
+
+# Scripts internos
+scripts/_prototype_*.py

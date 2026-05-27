@@ -137,7 +137,11 @@ def render_alertas(df):
     else:
         zscore_last, pico = 0, False
 
-    urg_72h = df[df["timestamp"] >= pd.Timestamp.now() - pd.Timedelta(days=30)]["urgencia"].sum()
+    urg_30d_serie = pd.to_numeric(
+        df[df["timestamp"] >= pd.Timestamp.now() - pd.Timedelta(days=30)]["urgencia"],
+        errors="coerce"
+    )
+    urg_72h = int(urg_30d_serie.sum()) if urg_30d_serie.notna().any() else 0
     new_combos = len(df[df["fuente"] == "formulario"]) if "fuente" in df.columns else 0
 
     alerts = [

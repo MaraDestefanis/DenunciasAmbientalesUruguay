@@ -259,7 +259,17 @@ def fig_tipo_denunciante(df):
 
 
 def fig_recurrencia_cat(df):
-    agg = df.groupby(["categoria_label", "recurrencia"]).size().reset_index(name="total")
+    # En el histórico la columna recurrencia es NaN. Filtramos para evitar gráfico vacío.
+    df2 = df.dropna(subset=["recurrencia"])
+    if df2.empty:
+        # Sin datos de recurrencia: figura placeholder con mensaje
+        fig = go.Figure()
+        fig.add_annotation(text="Sin datos de recurrencia<br>(este campo viene del formulario nuevo)",
+                           showarrow=False, font={"color": "#8b949e", "size": 14},
+                           xref="paper", yref="paper", x=0.5, y=0.5)
+        apply_theme(fig, height=340)
+        return fig
+    agg = df2.groupby(["categoria_label", "recurrencia"]).size().reset_index(name="total")
     total_by_cat = agg.groupby("categoria_label")["total"].transform("sum")
     agg["pct"] = agg["total"] / total_by_cat * 100
     cats = df["categoria_label"].value_counts().head(6).index.tolist()
@@ -278,7 +288,9 @@ def fig_recurrencia_cat(df):
 
 
 def fig_urgencia_gauge(df):
-    pct_urgente = df["urgencia"].mean() * 100
+    # urgencia puede tener NaN (histórico). Si todos NaN, mostramos 0%.
+    urgencia_num = pd.to_numeric(df["urgencia"], errors="coerce")
+    pct_urgente = (urgencia_num.mean() * 100) if urgencia_num.notna().any() else 0.0
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=pct_urgente,
@@ -367,7 +379,16 @@ def fig_anomalias_zscore(df):
 
 
 def fig_matriz_triage(df):
-    agg = df.groupby(["urgencia", "recurrencia"]).size().reset_index(name="total")
+    # En histórico urgencia y recurrencia son NaN.
+    df2 = df.dropna(subset=["urgencia", "recurrencia"])
+    if df2.empty:
+        fig = go.Figure()
+        fig.add_annotation(text="Sin datos para la matriz<br>(urgencia/recurrencia vienen del formulario)",
+                           showarrow=False, font={"color": "#8b949e", "size": 14},
+                           xref="paper", yref="paper", x=0.5, y=0.5)
+        apply_theme(fig, height=260)
+        return fig
+    agg = df2.groupby(["urgencia", "recurrencia"]).size().reset_index(name="total")
     agg["urgencia_label"] = agg["urgencia"].map({True: "Urgente", False: "No urgente"})
     pivot = agg.pivot(index="urgencia_label", columns="recurrencia", values="total").fillna(0)
 

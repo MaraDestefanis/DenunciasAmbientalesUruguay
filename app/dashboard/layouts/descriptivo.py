@@ -95,6 +95,17 @@ def render_geografico(df):
 
 
 def render_perfil(df):
+    # denuncia_previa puede ser NaN en histórico (sólo formulario lo completa).
+    # Casteo a numérico (True/False/None → 1/0/NaN) y uso skipna en mean().
+    import pandas as pd
+    prev_num = pd.to_numeric(df["denuncia_previa"], errors="coerce")
+    pct_previa = prev_num.mean() * 100 if prev_num.notna().any() else 0.0
+    df_previos = df[prev_num == 1] if prev_num.notna().any() else df.iloc[0:0]
+    if len(df_previos) > 0 and df_previos["organismo_previo"].notna().any():
+        organismo_top = df_previos["organismo_previo"].value_counts().index[0]
+    else:
+        organismo_top = "—"
+
     return html.Div([
         dbc.Row([
             dbc.Col(html.Div([
@@ -106,12 +117,9 @@ def render_perfil(df):
                 dcc.Graph(figure=charts.fig_urgencia_gauge(df), config={"displayModeBar": False}),
             ], className="chart-card"), md=4),
             dbc.Col(html.Div([
-                _stat_mini("Denuncia previa ante organismo", f"{df['denuncia_previa'].mean()*100:.1f}%",
+                _stat_mini("Denuncia previa ante organismo", f"{pct_previa:.1f}%",
                            "de los casos ya fueron denunciados antes"),
-                _stat_mini("Organismo más citado",
-                           df[df["denuncia_previa"] == True]["organismo_previo"].value_counts().index[0]
-                           if df["denuncia_previa"].any() else "—",
-                           "en denuncias previas"),
+                _stat_mini("Organismo más citado", organismo_top, "en denuncias previas"),
             ], className="chart-card"), md=4),
         ], className="g-3"),
         dbc.Row([

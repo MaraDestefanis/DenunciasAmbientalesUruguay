@@ -88,14 +88,23 @@ def _render_alert_box(df):
 
 def render_triage(df):
     import pandas as pd
-    agg = (df.groupby(["departamento", "categoria_label"])
+    import numpy as np
+    # Las columnas urgencia y recurrencia pueden venir con NaN en denuncias
+    # del histórico (sólo el formulario nuevo las completa). Las casteo a tipos
+    # numéricos / strings para que .mean() y la comparación funcionen.
+    urgencia_num = pd.to_numeric(df["urgencia"], errors="coerce").fillna(0)
+    rec_str = df["recurrencia"].astype(str)
+    df2 = df.assign(_urg=urgencia_num, _rec=rec_str)
+    agg = (df2.groupby(["departamento", "categoria_label"])
            .agg(total=("id_denuncia", "count"),
-                pct_urgente=("urgencia", "mean"),
-                pct_permanente=("recurrencia", lambda x: (x == "Permanente").mean()))
+                pct_urgente=("_urg", "mean"),
+                pct_permanente=("_rec", lambda x: (x == "Permanente").mean()))
            .reset_index())
+    agg["pct_urgente"] = pd.to_numeric(agg["pct_urgente"], errors="coerce").fillna(0)
+    agg["pct_permanente"] = pd.to_numeric(agg["pct_permanente"], errors="coerce").fillna(0)
     agg["score_riesgo"] = ((agg["total"] / agg["total"].max() * 40) +
                            (agg["pct_urgente"] * 35) +
-                           (agg["pct_permanente"] * 25)).round(1)
+                           (agg["pct_permanente"] * 25)).astype(float).round(1)
     top = agg.nlargest(15, "score_riesgo")
 
     def semaforo(s):
